@@ -8,7 +8,10 @@ import (
 	"gocloud.dev/blob"
 	"io"
 	"net/url"
+	"strings"
 )
+
+const PREFIX string = "bucket-"
 
 type BucketEmitter struct {
 	emitter.Emitter
@@ -18,7 +21,11 @@ type BucketEmitter struct {
 
 func init() {
 	ctx := context.Background()
-	emitter.RegisterEmitter(ctx, "bucket", NewBucketEmitter)
+
+	for _, scheme := range blob.DefaultURLMux().BucketSchemes() {
+		scheme = PREFIX + scheme
+		emitter.RegisterEmitter(ctx, scheme, NewBucketEmitter)
+	}
 }
 
 func NewBucketEmitter(ctx context.Context, uri string) (emitter.Emitter, error) {
@@ -29,8 +36,7 @@ func NewBucketEmitter(ctx context.Context, uri string) (emitter.Emitter, error) 
 		return nil, err
 	}
 
-	u.Scheme = u.Host
-	u.Host = ""
+	u.Scheme = strings.Replace(u.Scheme, PREFIX, "", 1)
 
 	bucket_uri := u.String()
 

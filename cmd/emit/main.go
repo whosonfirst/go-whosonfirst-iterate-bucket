@@ -1,6 +1,10 @@
 package main
 
 import (
+	_ "gocloud.dev/blob/fileblob"
+)
+
+import (
 	"context"
 	"flag"
 	"fmt"
@@ -19,7 +23,7 @@ func main() {
 	valid_schemes := strings.Join(emitter.Schemes(), ",")
 	emitter_desc := fmt.Sprintf("A valid whosonfirst/go-whosonfirst-iterate/emitter URI. Supported emitter URI schemes are: %s", valid_schemes)
 
-	var emitter_uri = flag.String("emitter-uri", "bucket://", emitter_desc)
+	var emitter_uri = flag.String("emitter-uri", "bucket-file:///", emitter_desc)
 
 	as_json := flag.Bool("json", false, "Emit features as a well-formed JSON array.")
 	as_geojson := flag.Bool("geojson", false, "Emit features as a well-formed GeoJSON FeatureCollection record.")

@@ -1,13 +1,16 @@
 package main
 
 import (
+	_ "gocloud.dev/blob/fileblob"
+)
+
+import (
 	"context"
 	"flag"
 	"fmt"
 	_ "github.com/whosonfirst/go-whosonfirst-iterate-bucket"
 	"github.com/whosonfirst/go-whosonfirst-iterate/emitter"
 	"github.com/whosonfirst/go-whosonfirst-iterate/iterator"
-	_ "gocloud.dev/blob/fileblob"
 	"io"
 	"log"
 	"os"
@@ -20,7 +23,7 @@ func main() {
 	valid_schemes := strings.Join(emitter.Schemes(), ",")
 	emitter_desc := fmt.Sprintf("A valid whosonfirst/go-whosonfirst-iterate/emitter URI. Supported emitter URI schemes are: %s", valid_schemes)
 
-	var emitter_uri = flag.String("emitter-uri", "bucket://", emitter_desc)
+	var emitter_uri = flag.String("emitter-uri", "bucket-file:///", emitter_desc)
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Count files in one or more whosonfirst/go-whosonfirst-iterate/emitter sources.\n")
