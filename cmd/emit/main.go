@@ -7,6 +7,7 @@ import (
 	_ "github.com/whosonfirst/go-whosonfirst-iterate-bucket"
 	"github.com/whosonfirst/go-whosonfirst-iterate/emitter"
 	"github.com/whosonfirst/go-whosonfirst-iterate/publisher"
+	_ "gocloud.dev/blob/fileblob"
 	"io"
 	"log"
 	"os"
