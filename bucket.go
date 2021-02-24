@@ -2,9 +2,9 @@ package bucket
 
 import (
 	"context"
+	"github.com/whosonfirst/go-ioutil"
 	"github.com/whosonfirst/go-whosonfirst-iterate/emitter"
 	"github.com/whosonfirst/go-whosonfirst-iterate/filters"
-	"github.com/whosonfirst/go-whosonfirst-iterate/ioutil"
 	"gocloud.dev/blob"
 	"io"
 	"net/url"
