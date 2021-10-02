@@ -3,8 +3,8 @@ package bucket
 import (
 	"context"
 	"github.com/whosonfirst/go-ioutil"
-	"github.com/whosonfirst/go-whosonfirst-iterate/emitter"
-	"github.com/whosonfirst/go-whosonfirst-iterate/filters"
+	"github.com/whosonfirst/go-whosonfirst-iterate/v2/emitter"
+	"github.com/whosonfirst/go-whosonfirst-iterate/v2/filters"
 	"gocloud.dev/blob"
 	"io"
 	"net/url"
@@ -131,9 +131,7 @@ func (em *BucketEmitter) WalkURI(ctx context.Context, emitter_cb emitter.Emitter
 				}
 			}
 
-			ctx = emitter.AssignPathContext(ctx, obj.Key)
-
-			err = emitter_cb(ctx, fh)
+			err = emitter_cb(ctx, obj.Key, fh)
 
 			if err != nil {
 				return err
