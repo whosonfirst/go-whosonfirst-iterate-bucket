@@ -67,6 +67,8 @@ func (em *BucketEmitter) WalkURI(ctx context.Context, emitter_cb emitter.Emitter
 	// add go routines
 	// add throttles
 
+	// Update to use https://github.com/aaronland/gocloud-blob/tree/main/walk
+	
 	var list func(context.Context, *blob.Bucket, string) error
 
 	list = func(ctx context.Context, b *blob.Bucket, prefix string) error {
