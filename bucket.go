@@ -2,13 +2,14 @@ package bucket
 
 import (
 	"context"
-	"github.com/whosonfirst/go-ioutil"
-	"github.com/whosonfirst/go-whosonfirst-iterate/v2/emitter"
-	"github.com/whosonfirst/go-whosonfirst-iterate/v2/filters"
-	"gocloud.dev/blob"
 	"io"
 	"net/url"
 	"strings"
+
+	"github.com/whosonfirst/go-ioutil"
+	"github.com/whosonfirst/go-whosonfirst-iterate/v2/emitter"
+	"github.com/whosonfirst/go-whosonfirst-iterate/v2/filters"
+	"gocloud.dev/blob"	
 )
 
 const PREFIX string = "bucket-"

@@ -1,21 +1,20 @@
 package main
 
 import (
-	_ "gocloud.dev/blob/fileblob"
-)
-
-import (
 	"context"
 	"flag"
 	"fmt"
-	_ "github.com/whosonfirst/go-whosonfirst-iterate-bucket/v2"
-	"github.com/whosonfirst/go-whosonfirst-iterate/v2/emitter"
-	"github.com/whosonfirst/go-whosonfirst-iterate/v2/iterator"
 	"io"
 	"log"
 	"os"
 	"strings"
 	"sync/atomic"
+	
+	_ "github.com/whosonfirst/go-whosonfirst-iterate-bucket/v2"
+	_ "gocloud.dev/blob/fileblob"
+	
+	"github.com/whosonfirst/go-whosonfirst-iterate/v2/emitter"
+	"github.com/whosonfirst/go-whosonfirst-iterate/v2/iterator"
 )
 
 func main() {
