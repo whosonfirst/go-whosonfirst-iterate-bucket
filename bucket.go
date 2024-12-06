@@ -101,7 +101,7 @@ func (it *BucketIterator) iterate(ctx context.Context, uri string) iter.Seq2[ite
 
 			for {
 
-				logger := logger.Default()
+				logger := slog.Default()
 				logger = logger.With("uri", uri)
 
 				obj, err := iter.Next(ctx)
@@ -169,7 +169,7 @@ func (it *BucketIterator) iterate(ctx context.Context, uri string) iter.Seq2[ite
 
 				logger.Debug("Yield new record")
 
-				iter_r := iterator.NewRecord(obj.Key, fh)
+				iter_r := iterator.NewRecord(obj.Key, r)
 				yield(iter_r, nil)
 			}
 
