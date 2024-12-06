@@ -9,13 +9,11 @@ import (
 	"os"
 	"strings"
 
-
-	_ "gocloud.dev/blob/fileblob"	
-	_ "gocloud.dev/blob/fileblob"	
 	_ "github.com/whosonfirst/go-whosonfirst-iterate-bucket/v2"
-	
+	_ "gocloud.dev/blob/fileblob"
+
 	"github.com/whosonfirst/go-whosonfirst-iterate/v2/emitter"
-	"github.com/whosonfirst/go-whosonfirst-iterate/v2/publisher"	
+	"github.com/whosonfirst/go-whosonfirst-iterate/v2/publisher"
 )
 
 func main() {

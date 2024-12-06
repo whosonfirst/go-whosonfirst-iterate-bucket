@@ -9,23 +9,19 @@ import (
 	"os"
 	"strings"
 	"sync/atomic"
-	
-	_ "github.com/whosonfirst/go-whosonfirst-iterate-bucket/v2"
+
+	_ "github.com/whosonfirst/go-whosonfirst-iterate-bucket/v3"
 	_ "gocloud.dev/blob/fileblob"
-	
-	"github.com/whosonfirst/go-whosonfirst-iterate/v2/emitter"
-	"github.com/whosonfirst/go-whosonfirst-iterate/v2/iterator"
+
+	"github.com/whosonfirst/go-whosonfirst-iterate/v3"
 )
 
 func main() {
 
-	valid_schemes := strings.Join(emitter.Schemes(), ",")
-	emitter_desc := fmt.Sprintf("A valid whosonfirst/go-whosonfirst-iterate/v2 URI. Supported emitter URI schemes are: %s", valid_schemes)
-
-	var emitter_uri = flag.String("emitter-uri", "bucket-file:///", emitter_desc)
+	var iterator_uri = flag.String("iterator-uri", "bucket-file:///", "")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Count files in one or more whosonfirst/go-whosonfirst-iterate/v2 sources.\n")
+		fmt.Fprintf(os.Stderr, "Count files in one or more whosonfirst/go-whosonfirst-iterate/v3 sources.\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t %s [options] uri(N) uri(N)\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Valid options are:\n\n")
 		flag.PrintDefaults()
@@ -36,26 +32,18 @@ func main() {
 	var count int64
 	count = 0
 
-	emitter_cb := func(ctx context.Context, path string, fh io.ReadSeeker, args ...interface{}) error {
-
-		atomic.AddInt64(&count, 1)
-		return nil
-	}
-
 	ctx := context.Background()
 
-	iter, err := iterator.NewIterator(ctx, *emitter_uri, emitter_cb)
+	it, err := iterator.NewIterator(ctx)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	paths := flag.Args()
+	sources := flag.Args()
 
-	err = iter.IterateURIs(ctx, paths...)
-
-	if err != nil {
-		log.Fatal(err)
+	for _, err := range iter.Iterate(ctx, iterator_uri, sources...) {
+		atomic.AddInt64(&count, 1)
 	}
 
 	log.Printf("Counted %d records (saw %d records)\n", count, iter.Seen)
