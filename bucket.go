@@ -2,11 +2,13 @@ package bucket
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"iter"
 	"log/slog"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/whosonfirst/go-ioutil"
 	"github.com/whosonfirst/go-whosonfirst-iterate/v3/filters"
@@ -16,6 +18,8 @@ import (
 
 const PREFIX string = "bucket-"
 
+var mu_iterators = new(sync.Map)
+
 type BucketIterator struct {
 	iterator.Iterator
 	bucket  *blob.Bucket
@@ -23,12 +27,44 @@ type BucketIterator struct {
 }
 
 func init() {
+
 	ctx := context.Background()
+	err := RegisterBucketIterators(ctx)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+// RegisterBucketIterators will explicitly register all the schemes...
+func RegisterBucketIterators(ctx context.Context) error {
+
+	to_register := make([]string, 0)
 
 	for _, scheme := range blob.DefaultURLMux().BucketSchemes() {
-		scheme = PREFIX + scheme
-		iterator.RegisterIterator(ctx, scheme, NewBucketIterator)
+		to_register = append(to_register, scheme)
 	}
+
+	for _, scheme := range to_register {
+
+		scheme = PREFIX + scheme
+
+		_, registered := mu_iterators.Load(scheme)
+
+		if registered {
+			continue
+		}
+
+		err := iterator.RegisterIterator(ctx, scheme, NewBucketIterator)
+
+		if err != nil {
+			return fmt.Errorf("Failed to register iterator for '%s', %w", scheme, err)
+		}
+
+		mu_iterators.Store(scheme, true)
+	}
+
+	return nil
 }
 
 func NewBucketIterator(ctx context.Context, uri string) (iterator.Iterator, error) {
@@ -85,8 +121,7 @@ func (it *BucketIterator) iterate(ctx context.Context, uri string) iter.Seq2[ite
 
 	return func(yield func(iterator.Record, error) bool) {
 
-		// add go routines
-		// add throttles
+		uri = strings.TrimLeft(uri, "/")
 
 		// Update to use https://github.com/aaronland/gocloud-blob/tree/main/walk
 
