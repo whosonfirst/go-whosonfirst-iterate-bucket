@@ -1,6 +1,6 @@
 # go-whosonfirst-index-bucket
 
-Go package implementing go-whosonfirst-iterate/emitter functionality for GoCloud blob resources.
+Go package implementing `whosonfirst/go-whosonfirst-iterate/v3` functionality for GoCloud blob resources.
 
 ## Important
 
@@ -12,41 +12,41 @@ Documentation for this package is incomplete and will be updated shortly.
 package main
 
 import (
-	_ "gocloud.dev/blob/fileblob"
-)
-
-import (
 	"context"
 	"flag"
 	"fmt"
-	_ "github.com/whosonfirst/go-whosonfirst-iterate-bucket/v2"
-	"github.com/whosonfirst/go-whosonfirst-iterate/v2/iterator"
-	"io"
 	"log"
-	"os"
-	"strings"
 	"sync/atomic"
+
+	_ "github.com/whosonfirst/go-whosonfirst-iterate-bucket/v3"
+	_ "gocloud.dev/blob/fileblob"
+	
+	"github.com/whosonfirst/go-whosonfirst-iterate/v3"
 )
 
 func main() {
 
-	flag.Parse()
-	uris := flag.Args()
-	
-	emitter_uri = "bucket-file:///"
-
 	var count int64
-	count = 0
+	var iterator_uri string
 
-	emitter_cb := func(ctx context.Context, path string fh io.ReadSeeker, args ...interface{}) error {
-		atomic.AddInt64(&count, 1)
-		return nil
-	}
+	flag.Parse()
+	iterator_sources := flag.Args()
+	
+	iterator_uri = "bucket-file:///"
+	count = 0
 
 	ctx := context.Background()
 
-	iter, _ := iterator.NewIterator(ctx, emitter_uri, emitter_cb)
-	iter.IterateURIs(ctx, uris...)
+	it, _ := iterator.NewIterator(ctx)
+
+	for _, err := range it.Iterate(ctx, iterator_uri, iterator_sources...){
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		
+		atomic.AddInt64(&count, 1)
+	}
 
 	log.Printf("Counted %d records (saw %d records)\n", count, iter.Seen)
 }
@@ -63,54 +63,6 @@ Importantly, `gocloud.dev/blob` import statements need to be declared _before_ y
 The reason this is necessary is because the initializer function in the `bucket.go` package registers available emitter schemes by iterating over the registered GoCloud `blob.Bucket` schemes and and prefixing them with "bucket-".
 
 For example the GoCloud "file://" scheme becomes "bucket-file://" in order to ensure that there aren't namespace collisions with schemes registered by other packages (for example "file://" is already registered by the `go-whosonfirst-iterate` package).
-
-## Tools
-
-### count
-
-Count files in one or more whosonfirst/go-whosonfirst-iterate/emitter sources.
-
-```
-$> ./bin/count -h
-Count files in one or more whosonfirst/go-whosonfirst-iterate/emitter sources.
-Usage:
-	 ./bin/count [options] uri(N) uri(N)
-Valid options are:
-
-  -emitter-uri string
-    	A valid whosonfirst/go-whosonfirst-iterate/emitter URI. Supported emitter URI schemes are: bucket-file://,directory://,featurecollection://,file://,filelist://,geojsonl://,repo:// (default "bucket-file:///")
-```
-
-For example:
-
-```
-$> ./bin/count -emitter-uri bucket-file:///usr/local/data/sfomuseum-data-architecture/ data
-2021/02/18 13:34:15 time to index paths (1) 810.932513ms
-2021/02/18 13:34:15 Counted 1072 records (saw 1072 records)
-```
-
-### emit
-
-Publish features from one or more whosonfirst/go-whosonfirst-iterate/emitter sources.
-
-```
-> ./bin/emit -h
-Publish features from one or more whosonfirst/go-whosonfirst-iterate/emitter sources.
-Usage:
-	 ./bin/emit [options] uri(N) uri(N)
-Valid options are:
-
-  -emitter-uri string
-    	A valid whosonfirst/go-whosonfirst-iterate/emitter URI. Supported emitter URI schemes are: bucket-file://,directory://,featurecollection://,file://,filelist://,geojsonl://,repo:// (default "bucket-file:///")
-  -geojson
-    	Emit features as a well-formed GeoJSON FeatureCollection record.
-  -json
-    	Emit features as a well-formed JSON array.
-  -null
-    	Publish features to /dev/null
-  -stdout
-    	Publish features to STDOUT. (default true)
-```
 
 ## See also
 
