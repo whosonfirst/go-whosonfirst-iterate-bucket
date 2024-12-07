@@ -121,9 +121,8 @@ func (it *BucketIterator) iterate(ctx context.Context, uri string) iter.Seq2[ite
 
 	return func(yield func(iterator.Record, error) bool) {
 
+		// Convenience to account for gocloud.dev/blob -isms
 		uri = strings.TrimLeft(uri, "/")
-
-		// Update to use https://github.com/aaronland/gocloud-blob/tree/main/walk
 
 		var list func(context.Context, *blob.Bucket, string) error
 
