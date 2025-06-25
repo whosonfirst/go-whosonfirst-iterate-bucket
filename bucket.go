@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/whosonfirst/go-whosonfirst-iterate-fs/v3"
 	"github.com/whosonfirst/go-whosonfirst-iterate/v3"
 	"gocloud.dev/blob"
 )
@@ -39,5 +38,5 @@ func NewBucketIterator(ctx context.Context, uri string) (iterate.Iterator, error
 		return nil, err
 	}
 
-	return fs.NewFSIterator(ctx, bucket_uri, bucket)
+	return iterate.NewFSIterator(ctx, bucket_uri, bucket)
 }
