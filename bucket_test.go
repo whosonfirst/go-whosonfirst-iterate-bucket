@@ -6,7 +6,8 @@ import (
 	"io"
 	"path/filepath"
 	"testing"
-
+	_ "log/slog"
+	
 	"github.com/whosonfirst/go-whosonfirst-iterate/v3"
 )
 
@@ -37,6 +38,8 @@ func TestBucketIterator(t *testing.T) {
 			break
 		}
 
+		defer rec.Body.Close()
+		     
 		_, err = io.ReadAll(rec.Body)
 
 		if err != nil {

@@ -4,7 +4,8 @@ import (
 	"context"
 	"net/url"
 	"strings"
-
+	"log/slog"
+	
 	"github.com/whosonfirst/go-whosonfirst-iterate/v3"
 	"gocloud.dev/blob"
 )
@@ -16,6 +17,7 @@ func init() {
 
 	for _, scheme := range blob.DefaultURLMux().BucketSchemes() {
 		scheme = PREFIX + scheme
+		slog.Info("Register iterator scheme", "scheme", scheme)
 		iterate.RegisterIterator(ctx, scheme, NewBucketIterator)
 	}
 }
