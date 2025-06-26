@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	_ "log/slog"
 	"path/filepath"
 	"testing"
-	_ "log/slog"
-	
+
 	"github.com/whosonfirst/go-whosonfirst-iterate/v3"
 )
 
@@ -39,7 +39,7 @@ func TestBucketIterator(t *testing.T) {
 		}
 
 		defer rec.Body.Close()
-		     
+
 		_, err = io.ReadAll(rec.Body)
 
 		if err != nil {
@@ -67,4 +67,9 @@ func TestBucketIterator(t *testing.T) {
 		t.Fatalf("Expected %d records, but counted %d", expected, count)
 	}
 
+	err = it.Close()
+
+	if err != nil {
+		t.Fatalf("Failed to close iterator, %v", err)
+	}
 }
