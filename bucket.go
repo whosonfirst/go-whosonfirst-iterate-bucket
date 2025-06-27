@@ -2,34 +2,87 @@ package bucket
 
 import (
 	"context"
-	"io"
+	"fmt"
+	"iter"
+	"log/slog"
 	"net/url"
 	"strings"
+	"sync"
 
-	"github.com/whosonfirst/go-ioutil"
-	"github.com/whosonfirst/go-whosonfirst-iterate/v2/emitter"
-	"github.com/whosonfirst/go-whosonfirst-iterate/v2/filters"
-	"gocloud.dev/blob"	
+	"github.com/whosonfirst/go-whosonfirst-iterate/v3"
+	"gocloud.dev/blob"
 )
 
 const PREFIX string = "bucket-"
 
-type BucketEmitter struct {
-	emitter.Emitter
-	bucket  *blob.Bucket
-	filters filters.Filters
+// In principle this could also be done with a sync.OnceFunc call but that will
+// require that everyone uses Go 1.21 (whose package import changes broke everything)
+// which is literally days old as I write this. So maybe a few releases after 1.21.
+//
+// Also, _not_ using a sync.OnceFunc means we can call RegisterSchemes multiple times
+// if and when multiple gomail-sender instances register themselves.
+
+var register_mu = new(sync.RWMutex)
+var register_map = map[string]bool{}
+
+// BucketIterator implements the `Iterator` interface for crawling records in a `gocloud.dev/blob.Bucket` bucket.
+type BucketIterator struct {
+	// bucket is the `gocloud.dev/blob.Bucket` instance where records are stored.
+	bucket *blob.Bucket
+	// iterator is the underlying `DirectoryIterator` instance for crawling records.
+	iterator iterate.Iterator
 }
 
 func init() {
-	ctx := context.Background()
 
-	for _, scheme := range blob.DefaultURLMux().BucketSchemes() {
-		scheme = PREFIX + scheme
-		emitter.RegisterEmitter(ctx, scheme, NewBucketEmitter)
+	ctx := context.Background()
+	err := RegisterSchemes(ctx)
+
+	if err != nil {
+		panic(err)
 	}
 }
 
-func NewBucketEmitter(ctx context.Context, uri string) (emitter.Emitter, error) {
+// RegisterSchemes will explicitly register all the schemes associated with the `gocloud.dev/blob` interface.
+func RegisterSchemes(ctx context.Context) error {
+
+	register_mu.Lock()
+	defer register_mu.Unlock()
+
+	for _, scheme := range blob.DefaultURLMux().BucketSchemes() {
+
+		scheme = PREFIX + scheme
+		slog.Debug("Register bucket iterator scheme", "scheme", scheme)
+
+		_, exists := register_map[scheme]
+
+		if exists {
+			continue
+		}
+
+		err := iterate.RegisterIterator(ctx, scheme, NewBucketIterator)
+
+		if err != nil {
+			return fmt.Errorf("Failed to register blob writer for '%s', %w", scheme, err)
+		}
+
+		register_map[scheme] = true
+	}
+
+	return nil
+}
+
+// NewBucketIterator() returns a new `BucketIterator` where 'uri' takes the form of:
+//
+//	bucket-{SCHEME}://?{PARAMETERS}
+//
+// Where {SCHEME} is a registered `gocloud.dev/blob` driver and {PARAMETERS} may be:
+// * `?include=` Zero or more `aaronland/go-json-query` query strings containing rules that must match for a document to be considered for further processing.
+// * `?exclude=` Zero or more `aaronland/go-json-query`	query strings containing rules that if matched will prevent a document from being considered for further processing.
+// * `?include_mode=` A valid `aaronland/go-json-query` query mode string for testing inclusion rules.
+// * `?exclude_mode=` A valid `aaronland/go-json-query` query mode string for testing exclusion rules.
+// * `?processes=` An optional number assigning the maximum number of database rows that will be processed simultaneously. (Default is defined by `runtime.NumCPU()`.)
+func NewBucketIterator(ctx context.Context, uri string) (iterate.Iterator, error) {
 
 	u, err := url.Parse(uri)
 
@@ -47,102 +100,43 @@ func NewBucketEmitter(ctx context.Context, uri string) (emitter.Emitter, error) 
 		return nil, err
 	}
 
-	q := u.Query()
-
-	f, err := filters.NewQueryFiltersFromQuery(ctx, q)
+	fs_iter, err := iterate.NewFSIterator(ctx, bucket_uri, bucket)
 
 	if err != nil {
 		return nil, err
 	}
 
-	em := &BucketEmitter{
-		bucket:  bucket,
-		filters: f,
+	it := &BucketIterator{
+		iterator: fs_iter,
+		bucket:   bucket,
 	}
 
-	return em, nil
+	return it, nil
 }
 
-func (em *BucketEmitter) WalkURI(ctx context.Context, emitter_cb emitter.EmitterCallbackFunc, uri string) error {
+// Iterate will return an `iter.Seq2[*Record, error]` for each record encountered in 'uris'.
+func (it *BucketIterator) Iterate(ctx context.Context, uris ...string) iter.Seq2[*iterate.Record, error] {
+	return it.iterator.Iterate(ctx, uris...)
+}
 
-	// add go routines
-	// add throttles
+// Seen() returns the total number of records processed so far.
+func (it *BucketIterator) Seen() int64 {
+	return it.iterator.Seen()
+}
 
-	// Update to use https://github.com/aaronland/gocloud-blob/tree/main/walk
-	
-	var list func(context.Context, *blob.Bucket, string) error
+// IsIterating() returns a boolean value indicating whether 'it' is still processing documents.
+func (it *BucketIterator) IsIterating() bool {
+	return it.iterator.IsIterating()
+}
 
-	list = func(ctx context.Context, b *blob.Bucket, prefix string) error {
+// Close performs any implementation specific tasks before terminating the iterator.
+func (it *BucketIterator) Close() error {
 
-		iter := b.List(&blob.ListOptions{
-			Delimiter: "/",
-			Prefix:    prefix,
-		})
+	err := it.iterator.Close()
 
-		for {
-			obj, err := iter.Next(ctx)
-
-			if err == io.EOF {
-				break
-			}
-
-			if err != nil {
-				return err
-			}
-
-			if obj.IsDir {
-
-				err := list(ctx, b, obj.Key)
-
-				if err != nil {
-					return err
-				}
-
-				continue
-			}
-
-			r, err := em.bucket.NewReader(ctx, obj.Key, nil)
-
-			if err != nil {
-				return err
-			}
-
-			defer r.Close()
-
-			fh, err := ioutil.NewReadSeekCloser(r)
-
-			if err != nil {
-				return err
-			}
-
-			if em.filters != nil {
-
-				ok, err := em.filters.Apply(ctx, fh)
-
-				if err != nil {
-					return err
-				}
-
-				if !ok {
-					return nil
-				}
-
-				_, err = fh.Seek(0, 0)
-
-				if err != nil {
-					return err
-				}
-			}
-
-			err = emitter_cb(ctx, obj.Key, fh)
-
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
+	if err != nil {
+		return err
 	}
 
-	return list(ctx, em.bucket, uri)
+	return it.bucket.Close()
 }
